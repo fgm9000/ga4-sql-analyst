@@ -89,7 +89,7 @@ Exemplo de saída (valores numéricos são placeholders):
 | RNF-01 | Latência p95 ponta a ponta (live) | ≤ 8 s | Hipótese a validar (2 chamadas LLM + dry-run + query) |
 | RNF-02 | Latência no modo offline (`FAKE_MODEL=1`) | ≤ 500 ms | Hipótese a validar |
 | RNF-03 | Teto de gasto mensal (LLM + BigQuery + Cloud Run) | US$ 5/mês | Decisão do Fabio |
-| RNF-04 | Rate limit | 5 req/min por IP; 200 req/dia global | Derivado do RNF-03; se não couber, a cota cai e o teto não sobe |
+| RNF-04 | Rate limit | 5 req/min por IP; 200 req/dia global; **máx. 80 req/dia com chamada nova ao LLM** (cache hits não contam) | Revisado em 2026-11-13 após spikes 2 e 3 (`docs/spikes.pt-BR.md`): `gemini-3.1-flash-lite` ≈ US$ 0,0019/pergunta → pior caso ≈ US$ 4,60/mês |
 | RNF-05 | Disponibilidade | Best effort; cold start aceito (`min-instances=0`), avisado no playground | Padrão Mestre |
 | RNF-06 | Idiomas | PT e EN em pergunta, resumo e interface | P1 |
 | RNF-07 | Privacidade | Texto digitado pelo usuário não vai para log (só tamanho e hash) | Padrão Mestre |
