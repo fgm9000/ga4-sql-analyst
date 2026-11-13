@@ -62,5 +62,27 @@ Medido com `bq --dry_run` e 2 queries reais no projeto `fgm9000-portfolio`.
 
 **Amostra para testes:** `tests/fixtures/ga4_sample.parquet` — 1% determinístico de usuários (`MOD(ABS(FARM_FINGERPRINT(user_pseudo_id)), 100) = 0`), 41.083 linhas, 2.713 usuários, todo o período, schema aninhado preservado no DuckDB, 2,0 MiB (zstd). Extração única cobrou 3.584.032.768 bytes (dentro da franquia). Script: `scripts/extract_sample.py`.
 
-## Spike 4 — Transpilação BigQuery → DuckDB
-*Pendente (depende da amostra do spike 2).*
+## Spike 4 — Transpilação BigQuery → DuckDB (2026-11-13) — ⚠️ confirma em parte
+
+`sqlglot` 30.31.0 → DuckDB 2.0.0 sobre a amostra. Reescritas na AST (`spikes/transpile.py`, sem regex): tabela curinga → `events`; `_TABLE_SUFFIX` → `event_date`; `UNNEST` sem alias dentro de `FROM` → `(SELECT UNNEST(x, max_depth := 2))`.
+
+| Query | Roda? | Linhas |
+|-------|-------|--------|
+| Q1 canal × receita, 30 dias | Sim, sem ajuste | 6 |
+| Q2 funil por dispositivo (`COUNTIF`, `SAFE_DIVIDE`) | Sim, sem ajuste | 3 |
+| Q3 sessões (`UNNEST` correlacionado em subquery) | Sim, **após 1 regra de AST própria** | 1 |
+| Q4 `, UNNEST(event_params) AS ep` | Sim, sem ajuste | 33 |
+
+- Traduzidos sozinhos pelo `sqlglot`: `COUNTIF`→`COUNT_IF`, `SAFE_DIVIDE`→`CASE WHEN`, `CONCAT`→`||`, `CAST AS STRING`→`AS TEXT`, `, UNNEST() AS ep`→`CROSS JOIN UNNEST() AS _t0(ep)`.
+- Erro sem o ajuste (Q3): `Binder Error: Referenced column "key" not found in FROM clause!` — o DuckDB devolve o STRUCT numa coluna `unnest`, o BigQuery expõe os campos.
+- Não testado: `UNNEST ... WITH OFFSET`, `UNNEST` de array de escalares.
+
+**Decisão:** ADR 001 mantido (DuckDB). O risco é real mas contornável: cada padrão novo de GA4 nas queries de referência (Fase 8) precisa de teste de **execução**, não só de transpilação. A regra de `UNNEST` vai para `domain.py` na Fase 2 com testes próprios. Plano B do ADR 001 (queries de referência também em DuckDB) continua disponível por query.
+
+## Resumo da Fase 1
+| Spike | Resultado | ADR afetado |
+|-------|-----------|-------------|
+| 1 — mypy × PydanticAI | ✅ passa sem supressão | 006 mantido |
+| 2 — Dry-run real | ✅ Cenário 3 confirmado; teto de 100 MB bloqueia perguntas legítimas | 002 — teto a decidir (proposta: 400 MB) |
+| 3 — Modelo Lite | ⚠️ 2.5 Flash-Lite descontinuado; custo maior | 001/002 — modelo e cota a decidir (proposta: 80 chamadas novas/dia) |
+| 4 — Transpilação | ⚠️ 3/4 diretas, 1 com regra de AST | 001 mantido |
