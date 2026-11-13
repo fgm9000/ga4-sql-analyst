@@ -11,6 +11,7 @@ Tese do PRD: o LLM gera SQL e resumo; o código tem autoridade sobre segurança,
 | Módulo | Responsabilidade |
 |--------|------------------|
 | `models.py` | Contratos Pydantic: requisição, saída estruturada do LLM (`sql`, `tables`, `intent`), envelope de resposta (`status`, `period`, `checks`, `rows`, `summary`, `degraded`) |
+| `sql_rules.py` | Regras de AST de C01–C03 (reexportadas por `domain.py`) |
 | `domain.py` | Lógica pura, sem I/O: validação de AST (`sqlglot`), âncora de data, reescrita `_TABLE_SUFFIX` → DuckDB, conferência de números do resumo |
 | `prompt.py` | Templates PT/EN, schema do dataset no prompt, isolamento XML do texto do usuário |
 | `llm.py` | Adaptadores PydanticAI (`SqlGenerator`, `Summarizer`) com `output_validator` chamando `domain.py` |
@@ -24,8 +25,8 @@ Tese do PRD: o LLM gera SQL e resumo; o código tem autoridade sobre segurança,
 ### Verificações (autoridade do código)
 | ID | Verificação | Ação em falha |
 |----|-------------|---------------|
-| C01 | AST: um único `SELECT`, sem DML/DDL | Nova tentativa (1x) → `blocked` |
-| C02 | Tabelas somente `bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*` | Nova tentativa (1x) → `blocked` |
+| C01 | AST: um único `SELECT`, sem DML/DDL; **sem funções de identidade/ambiente/conexão externa** (`SESSION_USER`, `CURRENT_USER`, `EXTERNAL_QUERY`, `ML.*`, `AI.*`, `KEYS.*`, `AEAD.*`, `@@variáveis`...) — achado na revisão da Fase 2: leitura pura ainda vaza a identidade da SA | Nova tentativa (1x) → `blocked` |
+| C02 | Tabelas somente `bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*` (ou diárias `events_YYYYMMDD`); **ao menos 1 tabela permitida** (`no_allowed_table`) | Nova tentativa (1x) → `blocked` |
 | C03 | `LIMIT` ausente → injetado (máx. 100) | Corrige, não bloqueia |
 | C04 | Âncora de data: relativas resolvidas contra 2021-01-31 | Determinístico, antes do LLM |
 | C05 | Dry-run: bytes estimados ≤ teto | `blocked` (sem nova tentativa) |
