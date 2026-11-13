@@ -31,8 +31,36 @@ PydanticAI `2.68.0` passa em `mypy --strict` **sem nenhuma supressão** (verific
 
 **Decisão:** ADR 006 mantido; plano B descartado. Código de evidência em `spikes/`.
 
-## Spike 2 — Dry-run real no BigQuery
-*Pendente (depende da autenticação local do Fabio).*
+## Spike 2 — Dry-run real no BigQuery (2026-11-13) — ✅ hipótese 1 do PRD refutada a favor
+
+Medido com `bq --dry_run` e 2 queries reais no projeto `fgm9000-portfolio`.
+
+**Dataset:** 92 tabelas diárias (`events_20201101`–`events_20210131`), 4.295.584 linhas, 3.417,6 MiB.
+
+| Query | Bytes estimados |
+|-------|-----------------|
+| `SELECT *` sem filtro (Cenário 3) | 3.583.657.854 (~3,6 GB) |
+| Cenário 1 — canal × receita, 30 dias | 10.987.776 (~11 MB) |
+| Cenário 1 sem filtro de data | 39.983.554 (~40 MB) |
+| Cenário 2 — funil por dispositivo, período todo | 92.817.563 (~93 MB) |
+| Funil por dispositivo, 30 dias | 25.474.732 (~25 MB) |
+| `UNNEST(event_params)`, período todo | 690.556.977 (~691 MB) |
+| `UNNEST(event_params)`, 30 dias | 178.365.186 (~178 MB) |
+| Sessões (`ga_session_id` via subquery em `event_params`), 30 dias | 223.151.506 (~223 MB) |
+
+**Cobrança mínima (execução real):**
+- 1 tabela, 1 coluna: processado 339.894 bytes → **cobrado 10.485.760 (10 MiB)**.
+- 92 tabelas (`events_*`), 1 coluna: processado 55.954.561 → cobrado 56.623.104.
+- Conclusão: o mínimo de 10 MiB vale **por query**, não por tabela × 92. A contabilidade de orçamento usa `max(bytes_estimados, 10 MiB)`.
+
+**Conclusões:**
+1. O Cenário 3 bloqueia com folga com qualquer teto razoável (3,6 GB). A hipótese 1 do PRD não se confirmou.
+2. **Tensão nova:** perguntas comuns de GA4 que usam `event_params` (sessões, page_location) passam de 175 MB em 30 dias. Com teto de 100 MB, seriam bloqueadas.
+3. O teto não pode ser derivado de 6 mil queries/mês se a cota de chamadas novas ao LLM for 80/dia (spike 3): cada execução no BigQuery vem de uma chamada nova (cache por hash de SQL cobre o resto) → 80 × 30 = 2.400 execuções/mês → 1 TiB ÷ 2.400 ≈ **437 MiB por query**.
+
+**Proposta (decisão do Fabio):** teto de **400 MB**, condicionado à cota de 80 chamadas novas/dia. Passam sessões e `UNNEST` em 30 dias; continuam bloqueados `SELECT *` (3,6 GB) e `UNNEST` no período todo (691 MB).
+
+**Amostra para testes:** `tests/fixtures/ga4_sample.parquet` — 1% determinístico de usuários (`MOD(ABS(FARM_FINGERPRINT(user_pseudo_id)), 100) = 0`), 41.083 linhas, 2.713 usuários, todo o período, schema aninhado preservado no DuckDB, 2,0 MiB (zstd). Extração única cobrou 3.584.032.768 bytes (dentro da franquia). Script: `scripts/extract_sample.py`.
 
 ## Spike 4 — Transpilação BigQuery → DuckDB
 *Pendente (depende da amostra do spike 2).*
