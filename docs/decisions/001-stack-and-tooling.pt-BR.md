@@ -17,7 +17,7 @@ O PRD v1.0 exige Python avançado, FastAPI e pandas para um pipeline de dados ro
 ## Decisão
 Python 3.12 + `uv` + Ruff + mypy `--strict` + Pytest + FastAPI + Pydantic v2, com `sqlglot` como dependência central de validação e transpilação de SQL.
 
-**S6 — Provedor de LLM (fechado em 2026-11-13):** Gemini via **Vertex AI**, faixa **Lite**, com o ID exato do modelo em variável de configuração (`settings.py`). Autenticação pela service account de runtime do Cloud Run (sem API key). Modelo vigente confirmado na Fase 3; se acurácia live < 85%, sobe para a faixa Flash e a cota diária cai para manter RNF-03.
+**S6 — Provedor de LLM (fechado em 2026-11-13):** Gemini via **Vertex AI**, faixa **Lite**, com o ID exato do modelo em variável de configuração (`settings.py`). Autenticação pela service account de runtime do Cloud Run (sem API key). **Atualização 2026-11-13 (spike 3):** `gemini-2.5-flash-lite` descontinuado (2026-10-20); default **`gemini-3.1-flash-lite`** (GA, descontinuação ≥ 2027-05-07); trocar por `gemini-3.5-flash-lite` se o preço no Vertex for ≤. Preço do Vertex confirmado na Fase 3; se acurácia live < 85%, sobe para a faixa Flash e a cota diária cai para manter RNF-03.
 
 **S5 — Persistência e banco local (fechado em 2026-11-13):**
 - Produção: sem banco (serviço sem estado; snapshot versionado no repositório). Cliente oficial `google-cloud-bigquery` para dry-run e execução.
