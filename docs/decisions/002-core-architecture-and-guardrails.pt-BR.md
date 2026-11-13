@@ -35,13 +35,13 @@ Tese do PRD: o LLM gera SQL e resumo; o código tem autoridade sobre segurança,
 `answered` | `blocked` (200, com motivo e SQL recusado) | `unavailable` (LLM fora, pergunta livre). `degraded: true` para snapshot ou BigQuery fora. `4xx` só para entrada inválida; `5xx` só para falha real.
 
 ### Proteção de custo e abuso (S11, fechado em 2026-11-13)
-1. Rate limit: 5 req/min por IP, 200 req/dia global (memória; válido porque `max-instances=1`).
+1. Rate limit: 5 req/min por IP, 200 req/dia global e **máx. 80 req/dia com chamada nova ao LLM** (memória; válido porque `max-instances=1`).
 2. Cache em memória sem expiração além do restart — seguro **porque o dataset é congelado**. Com dados vivos, exigiria TTL amarrado à atualização do warehouse.
-3. `maximum_bytes_billed`: 100 MB provisório (1 TiB ÷ 6 mil queries/mês ≈ 175 MB); valor final após dry-run real na Fase 1.
+3. `maximum_bytes_billed`: **400 MB** (fechado em 2026-11-13, spike 2): ≤ 80 execuções novas/dia × 30 = 2.400/mês → 1 TiB ÷ 2.400 ≈ 437 MiB. Orçamento contabiliza `max(bytes_estimados, 10 MiB)` (mínimo cobrado por query, medido).
 4. `max_tokens` de saída limitado por chamada; pergunta com tamanho máximo.
 5. Alerta de orçamento no Cloud Billing via Terraform (50/90/100% de US$ 5). Hipótese: permissão na conta de faturamento; senão, manual e documentado no runbook.
 - Fora: Turnstile (atrito nos 30 s; camadas 1–3 bastam). Supabase: fora (rate limit não precisa de store compartilhado).
-- A verificar na Fase 1: cobrança mínima por tabela referenciada no BigQuery (lembrança de 10 MB, não confirmada) × 92 tabelas diárias.
+- Verificado na Fase 1 (spike 2): mínimo de 10 MiB cobrado **por query**, não por tabela; 92 tabelas não multiplicam o mínimo.
 
 ## Justificativa
 Cada verificação verificável é código; o LLM só julga o semântico (tradução da pergunta e redação). As camadas de custo vão do request à conta do GCP, e a última vale mesmo com bug no código.
