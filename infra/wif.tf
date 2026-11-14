@@ -6,7 +6,7 @@ data "google_iam_workload_identity_pool" "github" {
 
 # This repo gets its own provider so the existing one is never modified.
 resource "google_iam_workload_identity_pool_provider" "github" {
-  # checkov:skip=CKV_GCP_125:False positive: the condition pins assertion.sub to this repo and main ref (no wildcards), but Checkov cannot resolve the var.github_repository interpolation in the sub claim. With the literal repo name the check passes.
+  # checkov:skip=CKV_GCP_125:False positive: the condition pins assertion.repository to this repo and assertion.ref to main (no wildcards), but Checkov cannot resolve the var.github_repository interpolation.
   project                            = var.project_id
   workload_identity_pool_id          = data.google_iam_workload_identity_pool.github.workload_identity_pool_id
   workload_identity_pool_provider_id = "github-${var.service_name}"
@@ -19,7 +19,9 @@ resource "google_iam_workload_identity_pool_provider" "github" {
   }
 
   # Only pushes to main of this repository (sub is repo:<owner/name>:ref:refs/heads/main).
-  attribute_condition = "assertion.sub == 'repo:${var.github_repository}:ref:refs/heads/main' && assertion.repository == '${var.github_repository}' && assertion.ref == 'refs/heads/main'"
+  # Same shape as the shared provider (proven by the demo 1). The `sub` claim is not pinned:
+  # the token issued to workflow_run-triggered jobs did not match the `repo:<repo>:ref:<ref>` form.
+  attribute_condition = "assertion.repository == '${var.github_repository}' && assertion.ref == 'refs/heads/main'"
 
   oidc {
     issuer_uri = "https://token.actions.githubusercontent.com"
