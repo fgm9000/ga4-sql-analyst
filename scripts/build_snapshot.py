@@ -7,75 +7,22 @@ Live: real BigQuery plus Vertex AI (billed; run only with Application Default Cr
 
 import argparse
 import asyncio
-import json
-import re
 from pathlib import Path
 
-from pydantic_ai import models
-from pydantic_ai.messages import (
-    ModelMessage,
-    ModelRequest,
-    ModelResponse,
-    ToolCallPart,
-    UserPromptPart,
-)
 from pydantic_ai.models import Model
-from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from ga4_sql_analyst.llm import PydanticAiSqlGenerator, PydanticAiSummarizer, build_vertex_model
 from ga4_sql_analyst.models import AskRequest, Lang
+from ga4_sql_analyst.offline import build_offline_service
 from ga4_sql_analyst.ports import Warehouse
 from ga4_sql_analyst.scenarios import SCENARIOS, Scenario
 from ga4_sql_analyst.service import AskService
 from ga4_sql_analyst.snapshot import DEFAULT_SNAPSHOT_PATH, Snapshot, SnapshotEntry, dump_entries
-from ga4_sql_analyst.warehouse import DuckDbWarehouse, create_bigquery_warehouse
+from ga4_sql_analyst.warehouse import create_bigquery_warehouse
 
 DEFAULT_PARQUET = Path("tests/fixtures/ga4_sample.parquet")
 DEFAULT_LOCATION = "global"
 MAX_BYTES = 400_000_000  # ADR 002: per-query billing ceiling
-RESULT_PATTERN = re.compile(r"<query_result>(.*)</query_result>", re.DOTALL)
-SUMMARY_TEXT: dict[Lang, str] = {
-    "pt": "Resultado principal: {key} = {value}.",
-    "en": "Top result: {key} = {value}.",
-}
-EMPTY_TEXT: dict[Lang, str] = {"pt": "Nenhum resultado encontrado.", "en": "No results found."}
-
-
-def _prompt_text(messages: list[ModelMessage]) -> str:
-    return "\n".join(
-        str(part.content)
-        for message in messages
-        if isinstance(message, ModelRequest)
-        for part in message.parts
-        if isinstance(part, UserPromptPart)
-    )
-
-
-def _scenario_sql(prompt: str) -> str:
-    for scenario in SCENARIOS:
-        if any(question in prompt for question in scenario.question.values()):
-            return scenario.offline_sql
-    raise ValueError("no scenario matches the prompt")
-
-
-def _summary_text(prompt: str, lang: Lang) -> str:
-    match = RESULT_PATTERN.search(prompt)
-    rows = json.loads(match.group(1)) if match is not None else []
-    if not rows:
-        return EMPTY_TEXT[lang]
-    key, value = next(iter(rows[0].items()))
-    return SUMMARY_TEXT[lang].format(key=key, value=value)
-
-
-def _offline_handler(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-    prompt = _prompt_text(messages)
-    lang: Lang = "pt" if "português" in (info.instructions or "") else "en"
-    args: dict[str, str | list[str]]
-    if "<query_result>" in prompt:
-        args = {"summary": _summary_text(prompt, lang)}
-    else:
-        args = {"sql": _scenario_sql(prompt), "tables": ["events_*"], "intent": "offline demo"}
-    return ModelResponse(parts=[ToolCallPart(info.output_tools[0].name, json.dumps(args))])
 
 
 def _build_service(warehouse: Warehouse, model: Model) -> AskService:
@@ -127,8 +74,7 @@ def _live_service(args: argparse.Namespace) -> AskService:
 
 
 def _offline_service(parquet: Path) -> AskService:
-    models.ALLOW_MODEL_REQUESTS = False
-    return _build_service(DuckDbWarehouse(parquet), FunctionModel(_offline_handler))
+    return build_offline_service(parquet, MAX_BYTES)
 
 
 def main() -> None:

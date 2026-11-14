@@ -3,6 +3,9 @@
 from collections.abc import Sequence
 
 import httpx
+import httpx2
+from google.auth.exceptions import GoogleAuthError
+from google.genai.errors import APIError
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.exceptions import ModelHTTPError, UnexpectedModelBehavior
@@ -32,7 +35,16 @@ RETRY_DETAIL_SEPARATOR = ": "
 
 RULE_EXPLANATION = "Only one read-only SELECT on the allowed GA4 events_* table is accepted."
 
-_PROVIDER_ERRORS = (UnexpectedModelBehavior, ModelHTTPError, httpx.HTTPError, TimeoutError)
+# Provider failures: PydanticAI wraps most, but transport and Google SDK errors can surface raw.
+_PROVIDER_ERRORS = (
+    UnexpectedModelBehavior,
+    ModelHTTPError,
+    httpx.HTTPError,
+    httpx2.HTTPError,
+    APIError,
+    GoogleAuthError,
+    TimeoutError,
+)
 
 
 class SummaryDraft(BaseModel):
