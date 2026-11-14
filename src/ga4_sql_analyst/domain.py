@@ -67,13 +67,10 @@ _PERIOD_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("last_quarter", re.compile(r"\b(?:ultimo trimestre|last quarter)\b")),
 )
 
-_PT_NUMBER = r"-?\d{1,3}(?:\.\d{3})+(?:,\d+)?|-?\d+(?:,\d+)?"
-_EN_NUMBER = r"-?\d{1,3}(?:,\d{3})+(?:\.\d+)?|-?\d+(?:\.\d+)?"
-_NUMBER_PATTERNS: dict[Lang, re.Pattern[str]] = {
-    "pt": re.compile(rf"(?<!\w)(?:{_PT_NUMBER})(?P<pct>%)?"),
-    "en": re.compile(rf"(?<!\w)(?:{_EN_NUMBER})(?P<pct>%)?"),
-}
+_DATE_FORMATS = r"\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\.\d{1,2}\.\d{4}"
+_NUMBER_PATTERN = re.compile(rf"(?<!\w)(?:(?P<date>{_DATE_FORMATS})|-?\d+(?:[.,]\d+)*(?P<pct>%)?)")
 _SEPARATORS: dict[Lang, tuple[str, str]] = {"pt": (".", ","), "en": (",", ".")}
+THOUSANDS_GROUP_DIGITS = 3
 
 
 # --- Period resolution (C04) ----------------------------------------------------------------
@@ -216,12 +213,30 @@ def check_cost(bytes_estimated: int, max_bytes: int) -> CheckResult:
 # --- Summary grounding (C06) ----------------------------------------------------------------
 
 
-def _parse_number(token: str, lang: Lang) -> tuple[float, int]:
-    """Return (value, written decimal places) for a number token in the given locale."""
+def _decimal_separator(body: str, lang: Lang) -> str | None:
+    """Pick the decimal separator of a token, accepting the other locale when unambiguous."""
     thousands, decimal = _SEPARATORS[lang]
-    cleaned = token.replace(thousands, "").replace(decimal, ".")
-    decimals = len(cleaned.split(".")[1]) if "." in cleaned else 0
-    return float(cleaned), decimals
+    separators = [char for char in body if char in thousands + decimal]
+    if not separators:
+        return None
+    if len(set(separators)) == 2:
+        return separators[-1]
+    if len(separators) > 1:
+        return None
+    is_group_of_three = len(body.split(separators[0])[1]) == THOUSANDS_GROUP_DIGITS
+    return separators[0] if separators[0] == decimal or not is_group_of_three else None
+
+
+def _parse_number(token: str, lang: Lang) -> tuple[float, int]:
+    """Return (value, written decimal places) for a number token."""
+    sign = -1.0 if token.startswith("-") else 1.0
+    body = token.lstrip("-")
+    decimal_separator = _decimal_separator(body, lang)
+    integer_part, fraction = body, ""
+    if decimal_separator is not None:
+        integer_part, _, fraction = body.rpartition(decimal_separator)
+    digits = "".join(char for char in integer_part if char.isdigit())
+    return sign * float(f"{digits}.{fraction or '0'}"), len(fraction)
 
 
 def _reference_values(
@@ -263,6 +278,8 @@ def ground_summary_numbers(
     ungrounded: list[str] = []
 
     def _replace(match: re.Match[str]) -> str:
+        if match.group("date") is not None:
+            return match.group(0)
         has_percent = match.group("pct") is not None
         token = match.group(0).removesuffix("%")
         value, decimals = _parse_number(token, lang)
@@ -271,7 +288,7 @@ def ground_summary_numbers(
         ungrounded.append(token)
         return UNGROUNDED_MARKER + ("%" if has_percent else "")
 
-    grounded_summary = _NUMBER_PATTERNS[lang].sub(_replace, summary)
+    grounded_summary = _NUMBER_PATTERN.sub(_replace, summary)
     detail = f"ungrounded:{','.join(ungrounded)}" if ungrounded else None
     result = CheckResult(id="C06_summary_numbers", passed=not ungrounded, detail=detail)
     return grounded_summary, result
