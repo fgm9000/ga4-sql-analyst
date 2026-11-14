@@ -5,12 +5,13 @@ import json
 import logging
 import sys
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import NoReturn, Protocol
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
+from fastapi.staticfiles import StaticFiles
 
 from ga4_sql_analyst.bootstrap import build_service
 from ga4_sql_analyst.cache import ResponseCache
@@ -38,6 +39,15 @@ STATUS_VALID = "valid"
 STATUS_INVALID = "invalid"
 ALLOWED_METHODS = ["GET", "POST"]
 ALLOWED_HEADERS = ["Content-Type"]
+WEB_MOUNT = "/app"
+WEB_SECURITY_HEADERS = {
+    "Content-Security-Policy": (
+        "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
+        "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    ),
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+}
 
 
 class AskHandler(Protocol):
@@ -61,6 +71,24 @@ def _hash_text(text: str) -> str:
 
 def _root() -> RedirectResponse:
     return RedirectResponse("/docs")
+
+
+def _web_redirect() -> RedirectResponse:
+    return RedirectResponse(f"{WEB_MOUNT}/")
+
+
+def _is_web_path(path: str) -> bool:
+    return path == WEB_MOUNT or path.startswith(f"{WEB_MOUNT}/")
+
+
+async def _add_web_security_headers(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    """Attach the strict CSP and hardening headers to the playground responses only."""
+    response = await call_next(request)
+    if _is_web_path(request.url.path):
+        response.headers.update(WEB_SECURITY_HEADERS)
+    return response
 
 
 def _health() -> dict[str, str]:
@@ -199,6 +227,10 @@ def create_app(
     app.add_api_route(
         "/v1/validate", handlers.validate, methods=["POST"], response_model=ValidateResponse
     )
+    if settings.web_dir.is_dir():
+        app.middleware("http")(_add_web_security_headers)
+        app.add_api_route(WEB_MOUNT, _web_redirect, methods=["GET"], include_in_schema=False)
+        app.mount(WEB_MOUNT, StaticFiles(directory=settings.web_dir, html=True), name="web")
     return app
 
 

@@ -1,0 +1,31 @@
+/*
+ * Tailwind source for web/styles.css (the compiled file is committed; CI needs no Node).
+ * Rebuild with (the `tailwindcss` package must be resolvable from this folder, e.g. via a
+ * throwaway `npm i --no-save tailwindcss@4.3.3`):
+ *   npx --yes @tailwindcss/cli@4.3.3 -i web/input.css -o web/styles.css --minify
+ */
+@import "tailwindcss";
+
+@source "./index.html";
+@source "./app.js";
+
+@layer utilities {
+  .shadow-2xs {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+}
+
+/* SQL can be long: wrap instead of scrolling sideways (also appended to styles.css). */
+.sql-wrap {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Cost meter: explicit colors (accent-color is not applied to <progress> fill in Chromium). Also appended to styles.css. */
+progress.cost-meter{appearance:none;-webkit-appearance:none;width:100%;height:.75rem;border:0;border-radius:9999px;background:#e2e8f0;overflow:hidden}
+progress.cost-meter::-webkit-progress-bar{background:#e2e8f0;border-radius:9999px}
+progress.cost-meter::-webkit-progress-value{background:#059669;border-radius:9999px}
+progress.cost-meter::-moz-progress-bar{background:#059669;border-radius:9999px}
+progress.cost-meter-over::-webkit-progress-value{background:#dc2626}
+progress.cost-meter-over::-moz-progress-bar{background:#dc2626}
+
