@@ -200,3 +200,11 @@ def test_summary_invented_number_next_to_date_is_still_marked() -> None:
     text, result = ground_summary_numbers(summary, ROWS, "pt", NO_CONTEXT)
     assert text == "Em 01/11/2020 houve [?] vendas."
     assert result.detail == "ungrounded:777,7"
+
+
+def test_c06_ignores_compact_suffix_dates() -> None:
+    summary = "Entre 20201101 e 20210131, a taxa foi de 20,3%."
+    rows = [{"rate": 0.2032871734162927}]
+    text, check = ground_summary_numbers(summary, rows, "pt", frozenset())
+    assert check.passed
+    assert text == summary

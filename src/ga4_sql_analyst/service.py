@@ -34,8 +34,9 @@ def _date_anchor_check(period: Period | None) -> CheckResult:
     return CheckResult(id="C04_date_anchor", passed=True, detail=detail)
 
 
-def _context_numbers(question: str, period: Period | None) -> frozenset[float]:
+def _context_numbers(question: str, period: Period | None, row_count: int) -> frozenset[float]:
     numbers = {float(token) for token in _INTEGER.findall(question)}
+    numbers.add(float(row_count))
     days = [DATASET_START, DATASET_END]
     if period is not None:
         days.extend((period.start, period.end))
@@ -126,7 +127,7 @@ class AskService:
                 degraded=True,
                 reason=REASON_SUMMARY,
             )
-        context = _context_numbers(request.question, period)
+        context = _context_numbers(request.question, period, len(rows))
         grounded, c06 = ground_summary_numbers(summary, rows, request.lang, context)
         return AskResponse(
             status="answered",

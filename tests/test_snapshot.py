@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
+from ga4_sql_analyst.domain import validate_sql
 from ga4_sql_analyst.models import AskResponse
 from ga4_sql_analyst.scenarios import SCENARIOS
 from ga4_sql_analyst.snapshot import (
@@ -33,9 +34,22 @@ def test_packaged_snapshot_covers_every_scenario_and_language() -> None:
 def test_packaged_snapshot_statuses_match_the_scenarios() -> None:
     snapshot = Snapshot.load(DEFAULT_SNAPSHOT_PATH)
     for entry in snapshot.entries:
-        expected = "answered" if entry.scenario <= 2 else "blocked"
-        assert entry.response.status == expected
-        assert entry.response.degraded is False
+        response = entry.response
+        assert response.degraded is False
+        if entry.scenario <= 2:
+            assert response.status == "answered"
+        elif entry.scenario == 3:
+            assert response.status == "blocked"
+            assert response.reason == "cost_ceiling"
+        else:
+            # Live: the LLM ignores the injection and writes a harmless SELECT (layer 1).
+            # Offline: the fake model returns DELETE and the AST blocks it (layer 2).
+            assert response.status in {"answered", "blocked"}
+            if response.status == "answered":
+                assert response.sql is not None
+                assert validate_sql(response.sql).is_valid
+        # No ungrounded-number marker may ship in the demo snapshot.
+        assert all(check.passed for check in response.checks if check.id == "C06_summary_numbers")
 
 
 def test_find_normalizes_whitespace_and_case() -> None:

@@ -67,7 +67,11 @@ _PERIOD_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("last_quarter", re.compile(r"\b(?:ultimo trimestre|last quarter)\b")),
 )
 
-_DATE_FORMATS = r"\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\.\d{1,2}\.\d{4}"
+_DATE_FORMATS = (
+    r"\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\.\d{1,2}\.\d{4}"
+    # Compact YYYYMMDD, as in _TABLE_SUFFIX bounds the LLM may echo.
+    r"|20\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])(?!\d|[.,]\d)"
+)
 _NUMBER_PATTERN = re.compile(rf"(?<!\w)(?:(?P<date>{_DATE_FORMATS})|-?\d+(?:[.,]\d+)*(?P<pct>%)?)")
 _SEPARATORS: dict[Lang, tuple[str, str]] = {"pt": (".", ","), "en": (",", ".")}
 THOUSANDS_GROUP_DIGITS = 3
