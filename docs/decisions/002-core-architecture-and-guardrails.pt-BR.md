@@ -20,7 +20,7 @@ Tese do PRD: o LLM gera SQL e resumo; o código tem autoridade sobre segurança,
 | `cache.py` | Cache em memória por pergunta normalizada + idioma e por hash do SQL |
 | `limits.py` | `StrictRateLimiter` por IP + cota diária |
 | `settings.py` | `pydantic-settings` (ID do modelo, teto de bytes, cotas) |
-| `api.py` | `GET /` → `/docs`, `GET /health` + `/healthz`, `POST /v1/ask` |
+| `api.py` | `GET /` → `/docs`, `GET /health` + `/healthz`, `POST /v1/ask`, `POST /v1/validate` (RF-08: só C01–C03, sem LLM nem execução; não consome a cota de LLM, só o rate limit por IP) |
 
 ### Verificações (autoridade do código)
 | ID | Verificação | Ação em falha |
