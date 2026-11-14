@@ -3,7 +3,14 @@
 import re
 from collections.abc import Sequence
 
-from ga4_sql_analyst.domain import check_cost, ground_summary_numbers, resolve_period, validate_sql
+from ga4_sql_analyst.domain import (
+    DATASET_END,
+    DATASET_START,
+    check_cost,
+    ground_summary_numbers,
+    resolve_period,
+    validate_sql,
+)
 from ga4_sql_analyst.errors import (
     LlmUnavailableError,
     SqlRejectedError,
@@ -29,9 +36,11 @@ def _date_anchor_check(period: Period | None) -> CheckResult:
 
 def _context_numbers(question: str, period: Period | None) -> frozenset[float]:
     numbers = {float(token) for token in _INTEGER.findall(question)}
+    days = [DATASET_START, DATASET_END]
     if period is not None:
-        for day in (period.start, period.end):
-            numbers.update((float(day.year), float(day.month), float(day.day)))
+        days.extend((period.start, period.end))
+    for day in days:
+        numbers.update((float(day.year), float(day.month), float(day.day)))
     return frozenset(numbers)
 
 
