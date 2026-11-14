@@ -1,5 +1,5 @@
 # Stage 1: Build virtual environment with uv
-FROM python:3.12-slim AS builder
+FROM python:3.15-slim AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:0.6.6 /uv /uvx /bin/
 
@@ -15,7 +15,7 @@ COPY src ./src
 RUN uv sync --frozen --no-dev --no-editable
 
 # Stage 2: Minimal non-root runtime image
-FROM python:3.12-slim AS runtime
+FROM python:3.15-slim AS runtime
 
 RUN groupadd --gid 10001 appgroup && \
     useradd --uid 10001 --gid appgroup --shell /sbin/nologin --no-create-home appuser
