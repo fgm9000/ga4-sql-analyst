@@ -16,6 +16,7 @@ DEFAULT_DAILY_LLM_CALLS = 80
 DEFAULT_CACHE_MAX_ENTRIES = 500
 DEFAULT_CORS_ORIGINS = ["https://fgm9000.github.io"]
 DEFAULT_SAMPLE_PATH = Path("tests/fixtures/ga4_sample.parquet")
+DEFAULT_WEB_DIR = Path("web")
 
 
 class Settings(BaseSettings):
@@ -36,6 +37,7 @@ class Settings(BaseSettings):
     )
     offline: bool = False
     sample_path: Path = DEFAULT_SAMPLE_PATH
+    web_dir: Path = DEFAULT_WEB_DIR
 
     @field_validator("cors_origins", mode="before")
     @classmethod
