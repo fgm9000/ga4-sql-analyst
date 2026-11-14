@@ -33,3 +33,6 @@ build/
 
 # Spikes local output
 spikes/out/
+
+# Terraform local variables (contain the billing account ID)
+infra/terraform.tfvars
