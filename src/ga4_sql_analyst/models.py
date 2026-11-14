@@ -86,3 +86,18 @@ class AskResponse(BaseModel):
     summary: str | None = None
     degraded: bool = False
     reason: str | None = None
+
+
+class ValidateRequest(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    sql: str = Field(min_length=1, max_length=SQL_MAX_CHARS)
+
+
+class ValidateResponse(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    is_valid: bool
+    sql: str
+    checks: list[CheckResult]
+    reason: str | None = None
