@@ -146,3 +146,65 @@ def test_summary_without_numbers() -> None:
     assert text == "Nada a relatar."
     assert result.passed is True
     assert result.detail is None
+
+
+def test_summary_dates_are_not_checked_and_en_style_decimal_in_pt() -> None:
+    summary = "No período entre 01/11/2020 e 31/01/2021, o canal organic gerou 16737.0 de receita."
+    rows: list[dict[str, CellValue]] = [{"r": 16737.0}]
+    text, result = ground_summary_numbers(summary, rows, "pt", NO_CONTEXT)
+    assert text == summary
+    assert result.passed is True
+
+
+def test_summary_pt_percent_from_long_ratio() -> None:
+    rows: list[dict[str, CellValue]] = [{"r": 0.2032871734162927}]
+    text, result = ground_summary_numbers("taxa de 20,3%", rows, "pt", NO_CONTEXT)
+    assert text == "taxa de 20,3%"
+    assert result.passed is True
+
+
+def test_summary_iso_dates_in_en() -> None:
+    summary = "from 2021-01-02 to 2021-01-31 revenue was 15829.0"
+    rows: list[dict[str, CellValue]] = [{"r": 15829.0}]
+    text, result = ground_summary_numbers(summary, rows, "en", NO_CONTEXT)
+    assert text == summary
+    assert result.passed is True
+
+
+@pytest.mark.parametrize("date_text", ["5/1/2021", "31.01.2021"])
+def test_summary_other_date_formats_are_untouched(date_text: str) -> None:
+    summary = f"Em {date_text} nada."
+    assert ground_summary_numbers(summary, [], "pt", NO_CONTEXT) == (
+        summary,
+        ground_summary_numbers(summary, [], "pt", NO_CONTEXT)[1],
+    )
+    assert ground_summary_numbers(summary, [], "pt", NO_CONTEXT)[1].passed is True
+
+
+def test_summary_multiple_thousands_groups() -> None:
+    rows: list[dict[str, CellValue]] = [{"n": 1350428}]
+    text, result = ground_summary_numbers("1.350.428 ocorrências", rows, "pt", NO_CONTEXT)
+    assert text == "1.350.428 ocorrências"
+    assert result.passed is True
+
+
+def test_summary_en_comma_decimal_and_mixed_separators() -> None:
+    rows: list[dict[str, CellValue]] = [{"n": 12.5, "m": 1234.56}]
+    assert ground_summary_numbers("rate 12,5%", rows, "en", NO_CONTEXT)[1].passed is True
+    assert ground_summary_numbers("got 1.234,56", rows, "en", NO_CONTEXT)[1].passed is True
+    assert ground_summary_numbers("got 1,234.56", rows, "pt", NO_CONTEXT)[1].passed is True
+
+
+def test_summary_invented_number_next_to_date_is_still_marked() -> None:
+    summary = "Em 01/11/2020 houve 777,7 vendas."
+    text, result = ground_summary_numbers(summary, ROWS, "pt", NO_CONTEXT)
+    assert text == "Em 01/11/2020 houve [?] vendas."
+    assert result.detail == "ungrounded:777,7"
+
+
+def test_c06_ignores_compact_suffix_dates() -> None:
+    summary = "Entre 20201101 e 20210131, a taxa foi de 20,3%."
+    rows = [{"rate": 0.2032871734162927}]
+    text, check = ground_summary_numbers(summary, rows, "pt", frozenset())
+    assert check.passed
+    assert text == summary
