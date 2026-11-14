@@ -38,3 +38,10 @@ Runbook com comandos manuais → Terraform. **O que se perde:** simplicidade e v
 
 ## Critério de revisão
 Terraform exigir gerenciar recursos compartilhados do `fgm9000-portfolio` (ex.: pool WIF) para funcionar — nesse caso, reavaliar o escopo para não acoplar as demos.
+
+## Atualização da Fase 6 (2026-11-14)
+- **Provider OIDC próprio.** O provider compartilhado `github-provider` só aceita `fgm9000/ad-copy-grader`. Em vez de alterá-lo (recurso da demo 1), este repo cria `github-ga4-sql-analyst` no mesmo pool, com condição `sub`, `repository` e `ref == refs/heads/main`. O pool continua `data source`; nenhum recurso da demo 1 foi tocado.
+- **Menor privilégio no deploy.** A demo 1 usa `roles/run.admin` no projeto. Aqui o deployer tem `roles/run.developer` (sem `setIamPolicy`); por isso o deploy usa só `--no-invoker-iam-check` (acesso público sem binding de IAM), sem `--allow-unauthenticated`. `iam.serviceAccountUser` só na SA de runtime e `artifactregistry.writer` só no repositório.
+- **Orçamento em BRL.** A conta de faturamento é em reais e a API de budgets rejeita outra moeda: R$ 28 ≈ US$ 5 (R$ 5,56/US$, fechamento de 2026-11-11). Filtro = projeto inteiro (inclui a demo 1), alertas em 50/90/100%.
+- **Checkov 3.4.0** no CI, com 2 skips justificados no código: `CKV_GCP_84` (CSEK no Artifact Registry; imagens públicas, chave gerenciada pelo Google basta) e `CKV_GCP_125` (falso positivo: o Checkov não resolve a variável dentro da condição do `sub`).
+- **Estado** em `gs://fgm9000-portfolio-tfstate` (prefixo `ga4-sql-analyst`), privado e versionado.

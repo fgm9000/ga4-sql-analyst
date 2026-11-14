@@ -1,0 +1,25 @@
+# VCS and local environments
+.git
+.venv
+**/__pycache__
+**/*.pyc
+
+# Caches and tool output
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.coverage
+htmlcov
+
+# Not needed in the runtime image
+tests
+spikes
+evals
+docs
+infra
+web
+scripts
+*.parquet
+
+# Keep the README (referenced by pyproject.toml)
+!README.md

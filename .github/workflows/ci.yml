@@ -78,3 +78,12 @@ jobs:
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           gitleaks detect --source . --verbose --redact
+
+  iac-scan:
+    name: IaC scan (Checkov, Terraform)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Run Checkov on infra/
+        run: uvx checkov@3.4.0 -d infra --quiet --compact
