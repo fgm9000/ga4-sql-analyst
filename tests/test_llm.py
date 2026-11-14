@@ -4,7 +4,10 @@ import json
 from collections.abc import Callable
 
 import httpx
+import httpx2
 import pytest
+from google.auth.exceptions import GoogleAuthError
+from google.genai.errors import APIError
 from pydantic_ai import models
 from pydantic_ai.exceptions import ModelHTTPError
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
@@ -174,3 +177,22 @@ def test_build_vertex_model_does_not_touch_network(monkeypatch: pytest.MonkeyPat
     monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "demo-project")
     model = build_vertex_model("gemini-2.5-flash", "demo-project", "us-central1")
     assert model.model_name == "gemini-2.5-flash"
+
+
+def _make(factory: Callable[[str], Exception], message: str) -> Exception:
+    """Build untyped third-party exceptions without an untyped call in typed context."""
+    return factory(message)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "error",
+    [
+        httpx2.ConnectError("boom"),
+        APIError(503, {"error": {"message": "down"}}),
+        _make(GoogleAuthError, "no creds"),
+    ],
+)
+async def test_raw_transport_and_sdk_errors_are_unavailable(error: Exception) -> None:
+    with pytest.raises(LlmUnavailableError):
+        await _sql_generator(_raising(error)).generate("sessions", "en", None)
