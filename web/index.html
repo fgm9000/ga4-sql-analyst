@@ -8,6 +8,11 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body class="min-h-full flex flex-col font-sans antialiased text-slate-800 bg-slate-50">
+  <div class="bg-slate-900">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-8 flex items-center">
+      <a href="https://github.com/fgm9000" class="text-xs font-medium text-slate-300 hover:text-white focus-visible:outline-2 focus-visible:outline-white" data-i18n="backToGithub">← Mais projetos no GitHub</a>
+    </div>
+  </div>
   <header class="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-2xs">
     <div class="max-w-6xl mx-auto px-4 sm:px-6">
       <div class="flex items-center justify-between h-16 gap-3">
@@ -30,6 +35,12 @@
   </header>
 
   <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 space-y-8">
+    <section aria-labelledby="introTitle" class="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
+      <h2 id="introTitle" class="text-sm font-bold text-slate-900 uppercase tracking-wide" data-i18n="introTitle">O que é isto</h2>
+      <p class="mt-2 text-sm text-slate-700 leading-relaxed" data-i18n="introP1">Faça uma pergunta, em português ou inglês, sobre o tráfego e as vendas de uma loja online e receba a resposta junto com o SQL que a gerou. Os dados são a amostra pública e anonimizada do Google Analytics 4 que o Google disponibiliza no BigQuery: a Google Merchandise Store de 1º/11/2020 a 31/01/2021, com 92 tabelas diárias, cerca de 4,3 milhões de eventos e 3,6 GB.</p>
+      <p class="mt-2 text-sm text-slate-700 leading-relaxed" data-i18n="introP2">Sua pergunta vai para uma API que eu construí (FastAPI no Google Cloud Run). Um LLM (Gemini no Vertex AI) escreve o SQL, e o código decide se ele pode rodar: só leitura, só esta tabela, período válido e no máximo 400 MB lidos por consulta. Só então a consulta roda no BigQuery, e o código ainda confere os números do resumo antes de mostrar a resposta.</p>
+    </section>
+
     <section aria-labelledby="stepsTitle" class="rounded-xl border border-indigo-200 bg-indigo-50 p-4 sm:p-5">
       <h2 id="stepsTitle" class="text-sm font-bold text-indigo-900 uppercase tracking-wide" data-i18n="stepsTitle">Explore em 30 segundos</h2>
       <ol class="mt-3 grid gap-3 sm:grid-cols-3 text-sm text-slate-800">

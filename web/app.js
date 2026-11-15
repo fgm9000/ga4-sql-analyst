@@ -38,6 +38,10 @@ const I18N = {
   pt: {
     subtitle: "Text-to-SQL com autoridade do código",
     apiLink: "API (/docs) ↗",
+    backToGithub: "← Mais projetos no GitHub",
+    introTitle: "O que é isto",
+    introP1: "Faça uma pergunta, em português ou inglês, sobre o tráfego e as vendas de uma loja online e receba a resposta junto com o SQL que a gerou. Os dados são a amostra pública e anonimizada do Google Analytics 4 que o Google disponibiliza no BigQuery: a Google Merchandise Store de 1º/11/2020 a 31/01/2021, com 92 tabelas diárias, cerca de 4,3 milhões de eventos e 3,6 GB.",
+    introP2: "Sua pergunta vai para uma API que eu construí (FastAPI no Google Cloud Run). Um LLM (Gemini no Vertex AI) escreve o SQL, e o código decide se ele pode rodar: só leitura, só esta tabela, período válido e no máximo 400 MB lidos por consulta. Só então a consulta roda no BigQuery, e o código ainda confere os números do resumo antes de mostrar a resposta.",
     stepsTitle: "Explore em 30 segundos",
     step1: "Escolha um cenário.",
     step2: "Veja o SQL e cada verificação: quem decidiu, o código ou o LLM.",
@@ -131,6 +135,10 @@ const I18N = {
   en: {
     subtitle: "Text-to-SQL with code authority",
     apiLink: "API (/docs) ↗",
+    backToGithub: "← More projects on GitHub",
+    introTitle: "What this is",
+    introP1: "Ask a question, in English or Portuguese, about an online store's traffic and sales and get the answer together with the SQL that produced it. The data is the public, anonymized Google Analytics 4 sample that Google publishes on BigQuery: the Google Merchandise Store from Nov 1, 2020 to Jan 31, 2021, with 92 daily tables, about 4.3 million events and 3.6 GB.",
+    introP2: "Your question goes to an API I built (FastAPI on Google Cloud Run). An LLM (Gemini on Vertex AI) writes the SQL, and code decides whether it may run: read-only, this table only, a valid date range and at most 400 MB read per query. Only then does the query run on BigQuery, and code still checks the numbers in the summary before showing the answer.",
     stepsTitle: "Explore in 30 seconds",
     step1: "Pick a scenario.",
     step2: "See the SQL and every check: who decided, the code or the LLM.",
