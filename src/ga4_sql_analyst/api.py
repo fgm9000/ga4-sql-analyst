@@ -58,10 +58,15 @@ class AskHandler(Protocol):
 
 
 def _client_ip(request: Request) -> str:
-    """Prefer the first X-Forwarded-For hop (Cloud Run), then the socket peer."""
-    forwarded = request.headers.get(FORWARDED_FOR_HEADER, "").split(",")[0].strip()
-    if forwarded:
-        return forwarded
+    """Use the last non-empty X-Forwarded-For hop, then the socket peer.
+
+    The Google Front End in front of Cloud Run appends the real client IP to the END of
+    the header, so the leading values are whatever the client sent and can be forged.
+    """
+    hops = [hop.strip() for hop in request.headers.get(FORWARDED_FOR_HEADER, "").split(",")]
+    trusted = [hop for hop in hops if hop]
+    if trusted:
+        return trusted[-1]
     return request.client.host if request.client is not None else UNKNOWN_CLIENT
 
 

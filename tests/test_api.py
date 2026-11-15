@@ -197,7 +197,33 @@ def test_forwarded_for_identifies_the_client() -> None:
     client = _client(limiter=_limiter(rate=1))
     assert _ask(client, ip="1.1.1.1, 2.2.2.2").status_code == 200
     assert _ask(client, ip="3.3.3.3").status_code == 200
-    assert _ask(client, ip="1.1.1.1").status_code == 429
+    assert _ask(client, ip="2.2.2.2").status_code == 429
+
+
+def test_forged_leading_hop_does_not_bypass_the_ip_limit() -> None:
+    client = _client(limiter=_limiter(rate=1))
+    assert _ask(client, ip="198.51.100.77, 203.0.113.195").status_code == 200
+    assert _ask(client, ip="198.51.100.78, 203.0.113.195").status_code == 429
+
+
+def _request(forwarded: str | None, peer: str | None) -> Request:
+    headers = [] if forwarded is None else [(b"x-forwarded-for", forwarded.encode())]
+    client = None if peer is None else (peer, 1234)
+    return Request({"type": "http", "headers": headers, "client": client})
+
+
+@pytest.mark.parametrize(
+    ("forwarded", "expected"),
+    [
+        ("198.51.100.77, 203.0.113.195", "203.0.113.195"),
+        ("203.0.113.195", "203.0.113.195"),
+        ("198.51.100.77, 203.0.113.195, ", "203.0.113.195"),
+        (" , ", "10.0.0.9"),
+        (None, "10.0.0.9"),
+    ],
+)
+def test_client_ip_uses_the_last_non_empty_hop(forwarded: str | None, expected: str) -> None:
+    assert _client_ip(_request(forwarded, "10.0.0.9")) == expected
 
 
 def test_client_ip_without_peer_is_unknown() -> None:
