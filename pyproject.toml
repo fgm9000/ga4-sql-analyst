@@ -10,7 +10,7 @@ authors = [
 ]
 dependencies = [
     "duckdb==2.0.0",
-    "fastapi==0.162.7",
+    "fastapi==0.163.2",
     "google-cloud-bigquery==3.47.0",
     "httpx2==2.16.0",
     "httpx==0.28.1",
